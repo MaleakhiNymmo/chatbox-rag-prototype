@@ -1,0 +1,66 @@
+# Stack lokal prototype ChatBox RAG
+# Jalan:  docker compose -f infra/docker-compose.yml up -d
+# Berhenti: docker compose -f infra/docker-compose.yml down
+#
+# CATATAN: Ollama TIDAK dijalankan lewat compose ini.
+# Ollama wajib install native di OS host:
+# - agar di Mac (Apple Silicon) bisa memakai GPU/Metal,
+# - agar di Windows/Linux laptop dev tidak ada overhead container untuk model.
+# n8n menjangkau Ollama host lewat host.docker.internal:11434.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-n8n}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me-in-env}
+      POSTGRES_DB: ${POSTGRES_DB:-n8n}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-n8n}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    restart: unless-stopped
+    ports:
+      - "6333:6333" # REST API + dashboard — hanya untuk dev lokal, jangan expose publik saat deployment
+    volumes:
+      - qdrant_data:/qdrant/storage
+
+  n8n:
+    image: n8nio/n8n:latest
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "5678:5678"
+    environment:
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: postgres
+      DB_POSTGRESDB_PORT: 5432
+      DB_POSTGRESDB_DATABASE: ${POSTGRES_DB:-n8n}
+      DB_POSTGRESDB_USER: ${POSTGRES_USER:-n8n}
+      DB_POSTGRESDB_PASSWORD: ${POSTGRES_PASSWORD:-change-me-in-env}
+      # Alamat layanan lain dibaca workflow dari environment ini (jangan hardcode di node)
+      OLLAMA_HOST: ${OLLAMA_HOST:-host.docker.internal:11434}
+      QDRANT_URL: ${QDRANT_URL:-http://qdrant:6333}
+      MCP_URL: ${MCP_URL:-}
+      GENERIC_TIMEZONE: ${GENERIC_TIMEZONE:-Asia/Jakarta}
+      TZ: ${GENERIC_TIMEZONE:-Asia/Jakarta}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - n8n_data:/home/node/.n8n
+      # Folder data SOP/FAQ di-mount read-only; path host dari .env DATA_DIR
+      - ${DATA_DIR:-../data}:/data:ro
+
+volumes:
+  postgres_data:
+  qdrant_data:
+  n8n_data:

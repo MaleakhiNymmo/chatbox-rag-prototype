@@ -1,0 +1,11 @@
+# Kredensial & konfigurasi lokal
+.env
+
+# Data asli perusahaan — TIDAK PERNAH masuk Git.
+# Yang boleh di-commit dari folder data/ hanya README.md-nya.
+data/*
+!data/README.md
+
+# Volume & artefak lokal
+*.log
+.DS_Store
