@@ -59,6 +59,8 @@ Prinsip: **dua workflow, satu vector store, satu model embedding yang sama persi
 | SOP panjang (PDF) | Chunk 500–800 token, overlap 100–150 | Cukup konteks per chunk, overlap menjaga kalimat yang terpotong |
 | Glosarium jargon internal | 1 istilah = 1 chunk | Membantu query rewrite memahami singkatan internal |
 
+> **Catatan konversi satuan node n8n:** Node *Recursive Character Text Splitter* di n8n menggunakan satuan **karakter**, bukan token. Dengan patokan konversi kasar **1 token ≈ 4 karakter**, target 500–800 token disetel menjadi **2.000–3.200 karakter** (scaffold default: `chunkSize: 2600`), dan overlap 100–150 token disetel menjadi **400–600 karakter** (scaffold default: `chunkOverlap: 500`).
+
 Metadata wajib per chunk: `source_file`, `category` (sop/faq/glosarium),
 `section` (bab/judul), `page` (jika PDF), `version`, `updated_at`.
 Metadata inilah yang ditampilkan sebagai sitasi di jawaban.
