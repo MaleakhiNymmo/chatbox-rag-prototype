@@ -111,8 +111,8 @@
     },
     {
       "parameters": {
-        "chunkSize": 650,
-        "chunkOverlap": 125,
+        "chunkSize": 2600,
+        "chunkOverlap": 500,
         "options": {}
       },
       "id": "a1f7a006-8b2e-4b6e-9311-66d4001a0006",
@@ -124,7 +124,7 @@
         700
       ],
       "notesInFlow": true,
-      "notes": "Chunk size: 650 (kisaran 500-800 token SOP), Overlap: 125 (kisaran 100-150 token). Pemisahan strategi splitter spesifik per tipe dokumen (misal FAQ 1 Q&A = 1 chunk) adalah penyempurnaan di fase berikutnya."
+      "notes": "Chunk size: 2600 karakter (konversi 1 token ≈ 4 karakter untuk target 500-800 token SOP), Overlap: 500 karakter (target 100-150 token). Pemisahan strategi splitter spesifik per tipe dokumen (misal FAQ 1 Q&A = 1 chunk) adalah penyempurnaan di fase berikutnya."
     },
     {
       "parameters": {
