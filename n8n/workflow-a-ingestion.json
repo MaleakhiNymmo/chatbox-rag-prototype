@@ -1,0 +1,239 @@
+{
+  "name": "Workflow A — Ingestion (Prototype)",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "a1f7a001-8b2e-4b6e-9311-66d4001a0001",
+      "name": "When clicking ‘Test workflow’",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        240,
+        280
+      ]
+    },
+    {
+      "parameters": {
+        "fileSelector": "={{ ($env.DATA_DIR_CONTAINER || '/data') + '/**/*' }}",
+        "options": {}
+      },
+      "id": "a1f7a002-8b2e-4b6e-9311-66d4001a0002",
+      "name": "Read Files from Disk",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        460,
+        280
+      ],
+      "notesInFlow": true,
+      "notes": "Membaca file dokumen (SOP/FAQ) dari volume mount container /data (sesuai infra/docker-compose.yml: ${DATA_DIR:-../data}:/data:ro)."
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "qdrantCollection": "={{ $env.QDRANT_COLLECTION || 'chatbox_knowledge' }}",
+        "options": {}
+      },
+      "id": "a1f7a003-8b2e-4b6e-9311-66d4001a0003",
+      "name": "Qdrant Vector Store",
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1,
+      "position": [
+        680,
+        280
+      ],
+      "credentials": {
+        "qdrantApi": {
+          "id": "",
+          "name": "Qdrant (URL: {{ $env.QDRANT_URL || 'http://qdrant:6333' }})"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "Mode: Insert Documents. Nama koleksi otomatis mengikuti $env.QDRANT_COLLECTION (default: chatbox_knowledge). Wajib identik dengan koleksi di Workflow B."
+    },
+    {
+      "parameters": {
+        "model": "={{ $env.EMBEDDING_MODEL || 'bge-m3' }}"
+      },
+      "id": "a1f7a004-8b2e-4b6e-9311-66d4001a0004",
+      "name": "Embeddings Ollama (bge-m3)",
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOllama",
+      "typeVersion": 1,
+      "position": [
+        560,
+        500
+      ],
+      "credentials": {
+        "ollamaApi": {
+          "id": "",
+          "name": "Ollama account (Host: $env.OLLAMA_HOST)"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "Embedding SUDAH FINAL: bge-m3, dimensi 1024. Wajib identik dengan model embedding di Workflow B (aturan no. 1 di docs/architecture.md)."
+    },
+    {
+      "parameters": {
+        "dataType": "binary",
+        "options": {
+          "metadata": {
+            "metadataValues": [
+              {
+                "name": "source_file",
+                "value": "={{ $binary.data?.fileName || $json.name || 'unknown' }}"
+              },
+              {
+                "name": "category",
+                "value": "sop"
+              },
+              {
+                "name": "version",
+                "value": "1.0"
+              },
+              {
+                "name": "updated_at",
+                "value": "={{ $now.toISO() }}"
+              }
+            ]
+          }
+        }
+      },
+      "id": "a1f7a005-8b2e-4b6e-9311-66d4001a0005",
+      "name": "Default Data Loader",
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1,
+      "position": [
+        780,
+        500
+      ],
+      "notesInFlow": true,
+      "notes": "Memuat data binary (PDF/Text/CSV). Metadata source_file, category, version, dan updated_at disisipkan ke chunk. Nomor halaman (page) diekstrak otomatis oleh PDF loader LangChain. Pemisahan per bab/section terstruktur disiapkan pada fase lanjutan."
+    },
+    {
+      "parameters": {
+        "chunkSize": 650,
+        "chunkOverlap": 125,
+        "options": {}
+      },
+      "id": "a1f7a006-8b2e-4b6e-9311-66d4001a0006",
+      "name": "Recursive Character Text Splitter",
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "typeVersion": 1,
+      "position": [
+        780,
+        700
+      ],
+      "notesInFlow": true,
+      "notes": "Chunk size: 650 (kisaran 500-800 token SOP), Overlap: 125 (kisaran 100-150 token). Pemisahan strategi splitter spesifik per tipe dokumen (misal FAQ 1 Q&A = 1 chunk) adalah penyempurnaan di fase berikutnya."
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- PLACEHOLDER AUDIT INGESTION LOG KE POSTGRES (NONAKTIF)\n-- Dijalankan pada tahap integrasi berikutnya untuk mencatat ke tabel ingestion_log:\n-- INSERT INTO ingestion_log (file_name, chunk_count, collection_name, ingested_at, version)\n-- VALUES ('{{ $binary.data?.fileName || $json.name }}', {{ $json.chunksCount || 1 }}, '{{ $env.QDRANT_COLLECTION || 'chatbox_knowledge' }}', NOW(), '1.0');"
+      },
+      "id": "a1f7a007-8b2e-4b6e-9311-66d4001a0007",
+      "name": "Postgres — ingestion_log (Placeholder)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        920,
+        280
+      ],
+      "disabled": true,
+      "notesInFlow": true,
+      "notes": "PLACEHOLDER NONAKTIF: Disediakan untuk tahap integrasi berikutnya guna mencatat audit ingestion (file, jumlah chunk, timestamp, versi) ke database Postgres lokal.",
+      "credentials": {
+        "postgres": {
+          "id": "",
+          "name": "Postgres (placeholder: isi dari .env POSTGRES_*)"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "When clicking ‘Test workflow’": {
+      "main": [
+        [
+          {
+            "node": "Read Files from Disk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Files from Disk": {
+      "main": [
+        [
+          {
+            "node": "Qdrant Vector Store",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Qdrant Vector Store": {
+      "main": [
+        [
+          {
+            "node": "Postgres — ingestion_log (Placeholder)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Ollama (bge-m3)": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Qdrant Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Default Data Loader": {
+      "ai_document": [
+        [
+          {
+            "node": "Qdrant Vector Store",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recursive Character Text Splitter": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "Default Data Loader",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "a1b2b3b4-0001-4000-8000-000000000001",
+  "id": "chatbox-workflow-a-ingestion",
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "instanceId": "chatbox-rag-prototype"
+  },
+  "tags": [
+    {
+      "createdAt": "2026-11-18T08:30:00.000Z",
+      "updatedAt": "2026-11-18T08:30:00.000Z",
+      "id": "chatbox-tag",
+      "name": "ChatBox"
+    }
+  ]
+}
