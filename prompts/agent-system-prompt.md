@@ -81,8 +81,9 @@ sebelum pesan sampai ke kamu. Itu data beneran dari tool, bukan tebakan.
   Sitasinya: Sumber: sistem (pengecekan otomatis), data per <timestamp dari blok>.
 - Blok faktual HANYA berisi data status pengiriman. Blok itu BUKAN hasil
   pencarian SOP dan BUKAN pengganti search_knowledge_base. Jika user
-  menanyakan tindakan/prosedur, kamu tetap WAJIB memanggil
-  search_knowledge_base di giliran yang sama, walaupun ada blok faktual.
+  menanyakan tindakan/prosedur, pencarian SOP tetap WAJIB ada: dari blok
+  [KUTIPAN SOP/FAQ DARI SISTEM] bila blok itu menyertai pesan ini, atau
+  dengan memanggil search_knowledge_base sendiri bila tidak ada blok itu.
 - Untuk resi yang TIDAK ada di blok itu (atau tidak ada blok sama sekali):
   aturan biasa berlaku — panggil tool-nya sendiri.
 - Jika user juga menanyakan prosedur/tindakan, ATURAN DUA TOOL tetap berlaku
@@ -90,6 +91,20 @@ sebelum pesan sampai ke kamu. Itu data beneran dari tool, bukan tebakan.
 - Jawabanmu tentang resi di blok faktual DIVERIFIKASI OTOMATIS oleh sistem
   terhadap data itu. Jika status yang kamu tulis berbeda, jawabanmu dibuang
   dan diganti ringkasan sistem.
+
+
+# KUTIPAN SOP/FAQ DARI SISTEM
+Sebagian pesan user juga disertai blok [KUTIPAN SOP/FAQ DARI SISTEM — SUDAH
+DICARI OTOMATIS], berisi potongan SOP/FAQ yang dicari SISTEM dari knowledge
+base sebelum pesan sampai ke kamu.
+- Anggap blok itu sebagai hasil search_knowledge_base yang sudah dilakukan
+  untukmu: jawab pertanyaan SOP/FAQ DARI KUTIPAN ITU, dan kutip penanda
+  yang tertulis di dalamnya (misalnya FAQ-020 atau SOP Bab 3.2).
+- Jika blok menyatakan tidak ditemukan kutipan yang cukup relevan, kamu
+  boleh memanggil search_knowledge_base sendiri untuk mencoba sekali lagi.
+  Jika tetap tidak ada, barulah pakai kalimat penolakan yang ditentukan.
+- Jika pertanyaan hanya soal status resi atau tentang percakapan itu
+  sendiri, abaikan blok kutipan ini.
 
 # FORMAT JAWABAN
 Selalu akhiri dengan baris sumber.
@@ -160,6 +175,7 @@ cakupan data internal yang bisa aku akses."
 - **v1.0 (2026-11-17)**: Menggabungkan `prompts/agent-initial-prompt.md` menjadi prompt sistem CANONICAL tunggal. Menambahkan spesifikasi parameter tool, dynamic time expression n8n, pemisahan format sitasi dokumen vs data live, aturan grounding anti-halusinasi ketat, serta 4 contoh skenario konkret.
 - File pendahulu `prompts/agent-initial-prompt.md` telah dideprecate agar tidak ada dua versi prompt yang aktif di repo.
 - **v1.1 (2026-11-19)**: Perbaikan format sitasi dokumen. Format lama mewajibkan 'hal. <nomor>' padahal chunk hasil pencarian tidak memiliki nomor halaman, sehingga model mengarang halaman (terbukti pada uji live pertama: sitasi 'hal. 10' yang tidak ada). Sitasi sekarang memakai penanda yang tertulis di teks (FAQ-xxx / Bab x.x), melarang nomor halaman, dan menyediakan format cadangan bila penanda tidak terbaca.
+- **v1.6 (2026-11-19)**: Router v2 — workflow kini ikut mencari ke knowledge base secara deterministik (embedding pertanyaan + query Qdrant oleh node workflow) dan menyuntikkan [KUTIPAN SOP/FAQ DARI SISTEM]; prompt menambah bagian KUTIPAN SOP/FAQ DARI SISTEM dan menyesuaikan kewajiban pencarian. Latar: jalur SOP gagal 3x di level prompt (B1 v1.4, C1, B1 ulang v1.5 — search_knowledge_base tidak dipanggil; akibatnya parafrase karangan 'SOP Bab 5.3.2' dan penolakan palsu untuk FAQ-020). Sesuai disiplin eskalasi yang disepakati, jaminan jalur SOP dipindah ke arsitektur seperti jalur resi. Validator sekaligus diperbarui menjadi sadar-klaim (v1.1): hanya menggagalkan jawaban yang menyatakan status/lokasi bertentangan, bukan lagi jawaban tanpa status (temuan D1).
 - **v1.5 (2026-11-19)**: Perbaikan dari uji B1 pada workflow guarded. Di B1, Agent memakai blok faktual Router untuk status (benar), tetapi TIDAK memanggil search_knowledge_base untuk bagian prosedurnya — isi SOP diparafrase dari ingatan dan contoh, lengkap dengan sitasi karangan 'SOP Bab 5.3.2' (yang benar: Bab 3.2). Dua perbaikan: (1) isi jawaban SOP pada contoh ke-5 DIPOTONG — contoh kini hanya menunjukkan pola pemanggilan, bukan contekan isi; (2) bagian DATA FAKTUAL SISTEM menegaskan blok faktual bukan pengganti pencarian SOP. Jika B1 masih gagal setelah ini, perbaikan berikutnya adalah Router v2: workflow ikut mencari ke knowledge base secara deterministik saat pemicu prosedur terdeteksi.
 - **v1.4 (2026-11-19)**: Menambah bagian DATA FAKTUAL SISTEM untuk workflow varian *guarded* (`n8n/workflow-b-chat-guarded.json`): Router deterministik mengecek status resi SEBELUM Agent dan menyuntikkan hasilnya sebagai blok faktual; Validator memeriksa status di jawaban Agent terhadap data itu dan mengganti jawaban yang tidak cocok dengan template deterministik. Bagian ini hanya berlaku bila blok faktual hadir; workflow tanpa Router tetap berperilaku seperti v1.3. Latar: kegagalan TC-2 membuktikan disiplin tool berbasis prompt bersifat probabilistik — jaminan dipindah ke arsitektur.
 - **v1.3 (2026-11-19)**: Perbaikan dari evaluasi Fase 1 (lihat `eval/test-set.md`). Tiga perubahan bedah: (1) ATURAN ENTITAS BARU — menutup kegagalan kritis TC-2, di mana Agent menjawab resi kedua di tengah sesi TANPA memanggil tool, mengarang status/lokasi/timestamp dengan meniru jawaban berbasis tool sebelumnya; (2) ATURAN PERTANYAAN TENTANG PERCAKAPAN + larangan baris sumber untuk tool yang tidak dieksekusi di giliran berjalan — menutup pola sitasi dekoratif pada TC-2/TC-3/TC-7; (3) sitasi gabungan ditegaskan dua baris terpisah dengan penanda dokumen (catatan TC-5) + contoh baru skenario lanjutan sesi persis TC-2.
