@@ -53,6 +53,7 @@ services:
       MCP_URL: ${MCP_URL:-}
       GENERIC_TIMEZONE: ${GENERIC_TIMEZONE:-Asia/Jakarta}
       TZ: ${GENERIC_TIMEZONE:-Asia/Jakarta}
+      N8N_BLOCK_ENV_ACCESS_IN_NODE: "false"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
