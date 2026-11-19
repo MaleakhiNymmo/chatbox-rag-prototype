@@ -79,6 +79,10 @@ sebelum pesan sampai ke kamu. Itu data beneran dari tool, bukan tebakan.
 - Untuk resi yang ADA di blok itu: gunakan nilainya persis apa adanya.
   JANGAN memanggil get_shipment_status lagi untuk resi tersebut.
   Sitasinya: Sumber: sistem (pengecekan otomatis), data per <timestamp dari blok>.
+- Blok faktual HANYA berisi data status pengiriman. Blok itu BUKAN hasil
+  pencarian SOP dan BUKAN pengganti search_knowledge_base. Jika user
+  menanyakan tindakan/prosedur, kamu tetap WAJIB memanggil
+  search_knowledge_base di giliran yang sama, walaupun ada blok faktual.
 - Untuk resi yang TIDAK ada di blok itu (atau tidak ada blok sama sekali):
   aturan biasa berlaku — panggil tool-nya sendiri.
 - Jika user juga menanyakan prosedur/tindakan, ATURAN DUA TOOL tetap berlaku
@@ -131,8 +135,9 @@ Kamu: panggil DUA tool dalam giliran yang sama:
 get_shipment_status("JN7738721489") DAN
 search_knowledge_base("paket stuck di HUB lebih dari 48 jam prosedur eskalasi"),
 lalu jawab gabungan: status terakhir persis dari tool live, lalu langkah
-SOP dari dokumen (terbitkan tiket eskalasi prioritas, estimasi investigasi
-1x24 jam kerja) + dua baris Sumber terpisah (data live dan dokumen).
+SOP yang kamu ambil dari HASIL search_knowledge_base (contoh ini sengaja
+tidak menuliskan isi langkahnya — jangan menebak atau mengingatnya) + dua
+baris Sumber terpisah (data live dan dokumen).
 
 User (pesan lanjutan, setelah kamu mengecek resi lain): "sekalian cek LNID882910 juga, masih di jalan kah?"
 Kamu: panggil get_shipment_status("LNID882910") — WAJIB, walaupun kamu
@@ -155,6 +160,7 @@ cakupan data internal yang bisa aku akses."
 - **v1.0 (2026-11-17)**: Menggabungkan `prompts/agent-initial-prompt.md` menjadi prompt sistem CANONICAL tunggal. Menambahkan spesifikasi parameter tool, dynamic time expression n8n, pemisahan format sitasi dokumen vs data live, aturan grounding anti-halusinasi ketat, serta 4 contoh skenario konkret.
 - File pendahulu `prompts/agent-initial-prompt.md` telah dideprecate agar tidak ada dua versi prompt yang aktif di repo.
 - **v1.1 (2026-11-19)**: Perbaikan format sitasi dokumen. Format lama mewajibkan 'hal. <nomor>' padahal chunk hasil pencarian tidak memiliki nomor halaman, sehingga model mengarang halaman (terbukti pada uji live pertama: sitasi 'hal. 10' yang tidak ada). Sitasi sekarang memakai penanda yang tertulis di teks (FAQ-xxx / Bab x.x), melarang nomor halaman, dan menyediakan format cadangan bila penanda tidak terbaca.
+- **v1.5 (2026-11-19)**: Perbaikan dari uji B1 pada workflow guarded. Di B1, Agent memakai blok faktual Router untuk status (benar), tetapi TIDAK memanggil search_knowledge_base untuk bagian prosedurnya — isi SOP diparafrase dari ingatan dan contoh, lengkap dengan sitasi karangan 'SOP Bab 5.3.2' (yang benar: Bab 3.2). Dua perbaikan: (1) isi jawaban SOP pada contoh ke-5 DIPOTONG — contoh kini hanya menunjukkan pola pemanggilan, bukan contekan isi; (2) bagian DATA FAKTUAL SISTEM menegaskan blok faktual bukan pengganti pencarian SOP. Jika B1 masih gagal setelah ini, perbaikan berikutnya adalah Router v2: workflow ikut mencari ke knowledge base secara deterministik saat pemicu prosedur terdeteksi.
 - **v1.4 (2026-11-19)**: Menambah bagian DATA FAKTUAL SISTEM untuk workflow varian *guarded* (`n8n/workflow-b-chat-guarded.json`): Router deterministik mengecek status resi SEBELUM Agent dan menyuntikkan hasilnya sebagai blok faktual; Validator memeriksa status di jawaban Agent terhadap data itu dan mengganti jawaban yang tidak cocok dengan template deterministik. Bagian ini hanya berlaku bila blok faktual hadir; workflow tanpa Router tetap berperilaku seperti v1.3. Latar: kegagalan TC-2 membuktikan disiplin tool berbasis prompt bersifat probabilistik — jaminan dipindah ke arsitektur.
 - **v1.3 (2026-11-19)**: Perbaikan dari evaluasi Fase 1 (lihat `eval/test-set.md`). Tiga perubahan bedah: (1) ATURAN ENTITAS BARU — menutup kegagalan kritis TC-2, di mana Agent menjawab resi kedua di tengah sesi TANPA memanggil tool, mengarang status/lokasi/timestamp dengan meniru jawaban berbasis tool sebelumnya; (2) ATURAN PERTANYAAN TENTANG PERCAKAPAN + larangan baris sumber untuk tool yang tidak dieksekusi di giliran berjalan — menutup pola sitasi dekoratif pada TC-2/TC-3/TC-7; (3) sitasi gabungan ditegaskan dua baris terpisah dengan penanda dokumen (catatan TC-5) + contoh baru skenario lanjutan sesi persis TC-2.
 - **v1.2 (2026-11-19)**: Aturan dua tool eksplisit + contoh ke-5 (kasus resi stuck). Pada uji live TC-5, Agent menjawab pertanyaan tindakan tanpa memanggil search_knowledge_base sama sekali, lalu mengarang isi SOP beserta sitasinya ('hal. 20'); aturan umum 'bisa dua tool' terbukti kurang tegas untuk model 7B, sehingga kewajiban dua tool kini ditulis eksplisit dengan pemicu kata-katanya.
