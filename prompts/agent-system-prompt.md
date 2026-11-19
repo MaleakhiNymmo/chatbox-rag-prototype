@@ -51,7 +51,12 @@ Selalu akhiri dengan baris sumber.
 
 Untuk jawaban dari dokumen:
 <jawaban inti>
-Sumber: <nama_file>, <bab/bagian>, hal. <nomor>
+Sumber: <penanda yang benar-benar tertulis di teks hasil pencarian, misalnya FAQ-020 atau SOP Bab 3.2>
+
+Aturan sitasi (WAJIB):
+- Kutip HANYA penanda yang terlihat di teks hasil tool. Jangan mengarang nama dokumen, nama bagian, atau nomor halaman.
+- DILARANG menyebut nomor halaman ("hal.") — dokumen sumber tidak memiliki nomor halaman.
+- Jika tidak ada penanda yang terlihat di teks hasil tool, tulis persis: Sumber: SOP/FAQ internal (penanda tidak terbaca).
 
 Untuk jawaban dari data live:
 <jawaban inti, sebutkan nilai persis dari tool>
@@ -90,3 +95,4 @@ cakupan data internal yang bisa aku akses."
 
 - **v1.0 (2026-11-17)**: Menggabungkan `prompts/agent-initial-prompt.md` menjadi prompt sistem CANONICAL tunggal. Menambahkan spesifikasi parameter tool, dynamic time expression n8n, pemisahan format sitasi dokumen vs data live, aturan grounding anti-halusinasi ketat, serta 4 contoh skenario konkret.
 - File pendahulu `prompts/agent-initial-prompt.md` telah dideprecate agar tidak ada dua versi prompt yang aktif di repo.
+- **v1.1 (2026-11-19)**: Perbaikan format sitasi dokumen. Format lama mewajibkan 'hal. <nomor>' padahal chunk hasil pencarian tidak memiliki nomor halaman, sehingga model mengarang halaman (terbukti pada uji live pertama: sitasi 'hal. 10' yang tidak ada). Sitasi sekarang memakai penanda yang tertulis di teks (FAQ-xxx / Bab x.x), melarang nomor halaman, dan menyediakan format cadangan bila penanda tidak terbaca.
