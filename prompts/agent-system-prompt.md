@@ -71,6 +71,22 @@ DILARANG memakai waktu saat ini untuk data dari giliran sebelumnya.
    katakan persis: "Tidak ditemukan di SOP/data yang tersedia."
    Jangan mengarang pasal, prosedur, harga, status, atau tanggal.
 
+
+# DATA FAKTUAL SISTEM
+Sebagian pesan user disertai blok [DATA FAKTUAL SISTEM — SUDAH DICEK OTOMATIS].
+Blok itu berisi hasil pengecekan status yang dilakukan SISTEM secara otomatis
+sebelum pesan sampai ke kamu. Itu data beneran dari tool, bukan tebakan.
+- Untuk resi yang ADA di blok itu: gunakan nilainya persis apa adanya.
+  JANGAN memanggil get_shipment_status lagi untuk resi tersebut.
+  Sitasinya: Sumber: sistem (pengecekan otomatis), data per <timestamp dari blok>.
+- Untuk resi yang TIDAK ada di blok itu (atau tidak ada blok sama sekali):
+  aturan biasa berlaku — panggil tool-nya sendiri.
+- Jika user juga menanyakan prosedur/tindakan, ATURAN DUA TOOL tetap berlaku
+  untuk bagian prosedurnya: panggil search_knowledge_base.
+- Jawabanmu tentang resi di blok faktual DIVERIFIKASI OTOMATIS oleh sistem
+  terhadap data itu. Jika status yang kamu tulis berbeda, jawabanmu dibuang
+  dan diganti ringkasan sistem.
+
 # FORMAT JAWABAN
 Selalu akhiri dengan baris sumber.
 
@@ -139,5 +155,6 @@ cakupan data internal yang bisa aku akses."
 - **v1.0 (2026-11-17)**: Menggabungkan `prompts/agent-initial-prompt.md` menjadi prompt sistem CANONICAL tunggal. Menambahkan spesifikasi parameter tool, dynamic time expression n8n, pemisahan format sitasi dokumen vs data live, aturan grounding anti-halusinasi ketat, serta 4 contoh skenario konkret.
 - File pendahulu `prompts/agent-initial-prompt.md` telah dideprecate agar tidak ada dua versi prompt yang aktif di repo.
 - **v1.1 (2026-11-19)**: Perbaikan format sitasi dokumen. Format lama mewajibkan 'hal. <nomor>' padahal chunk hasil pencarian tidak memiliki nomor halaman, sehingga model mengarang halaman (terbukti pada uji live pertama: sitasi 'hal. 10' yang tidak ada). Sitasi sekarang memakai penanda yang tertulis di teks (FAQ-xxx / Bab x.x), melarang nomor halaman, dan menyediakan format cadangan bila penanda tidak terbaca.
+- **v1.4 (2026-11-19)**: Menambah bagian DATA FAKTUAL SISTEM untuk workflow varian *guarded* (`n8n/workflow-b-chat-guarded.json`): Router deterministik mengecek status resi SEBELUM Agent dan menyuntikkan hasilnya sebagai blok faktual; Validator memeriksa status di jawaban Agent terhadap data itu dan mengganti jawaban yang tidak cocok dengan template deterministik. Bagian ini hanya berlaku bila blok faktual hadir; workflow tanpa Router tetap berperilaku seperti v1.3. Latar: kegagalan TC-2 membuktikan disiplin tool berbasis prompt bersifat probabilistik — jaminan dipindah ke arsitektur.
 - **v1.3 (2026-11-19)**: Perbaikan dari evaluasi Fase 1 (lihat `eval/test-set.md`). Tiga perubahan bedah: (1) ATURAN ENTITAS BARU — menutup kegagalan kritis TC-2, di mana Agent menjawab resi kedua di tengah sesi TANPA memanggil tool, mengarang status/lokasi/timestamp dengan meniru jawaban berbasis tool sebelumnya; (2) ATURAN PERTANYAAN TENTANG PERCAKAPAN + larangan baris sumber untuk tool yang tidak dieksekusi di giliran berjalan — menutup pola sitasi dekoratif pada TC-2/TC-3/TC-7; (3) sitasi gabungan ditegaskan dua baris terpisah dengan penanda dokumen (catatan TC-5) + contoh baru skenario lanjutan sesi persis TC-2.
 - **v1.2 (2026-11-19)**: Aturan dua tool eksplisit + contoh ke-5 (kasus resi stuck). Pada uji live TC-5, Agent menjawab pertanyaan tindakan tanpa memanggil search_knowledge_base sama sekali, lalu mengarang isi SOP beserta sitasinya ('hal. 20'); aturan umum 'bisa dua tool' terbukti kurang tegas untuk model 7B, sehingga kewajiban dua tool kini ditulis eksplisit dengan pemicu kata-katanya.
