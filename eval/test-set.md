@@ -187,6 +187,39 @@ ingatan; penilaian dari pohon Logs + jawaban):
    jalur eskalasi terisi, cakupan `check_ongkir`/`get_order_detail`,
    Putaran 3 dengan ±20 pertanyaan asli tim internal.
 
+## Addendum Putaran 2 — Verifikasi Guarded v2.1 (20 Nov 2026)
+
+Build: commit `2c4b555` (gerbang niat Router, prompt v1.7, Validator v1.3 mode
+augment, `updated_at` mock tetap) + commit `7451f9b` (numCtx 8192, mock tool
+meng-echo resi, .gitignore diperkeras — dua temuan audit Antigravity yang
+terverifikasi). Metode sama: kata-kata uji identik; sesi baru untuk setiap
+kasus kecuali Sesi A yang memang rantai.
+
+| Kasus | Hasil | Waktu/Token | Catatan inti |
+|---|---|---|---|
+| A1 | LOLOS | 8m12s / 6.180 | Baris pembuka status prompt v1.7 menembak verbatim; sitasi FAQ-004 + SOP Bab 3.1 terpisah dan benar — A1 terbersih sejauh ini |
+| A2 | LOLOS | 8m09s / 6.441 | Gerbang menutup: jawaban 3 baris (di v2: laporan ber-SOP, 15m19s / 8.870). Eskalasi latensi antar-giliran putus |
+| A3 | LOLOS | 12m06s / 6.704 | Token datar; menit ekstra ditengarai beban CPU laptop (audit AGY berjalan paralel), bukan workflow |
+| A4 | LOLOS | 9m35s / 6.841 | Ingatan memanggil resi PERTAMA dengan benar (JN7738721489) — berbalik dari GAGAL di v2. Tersangka utama: numCtx 8192 (konteks v2 mencapai 14.221 token melawan jendela 2048) + riwayat sesi yang jauh lebih ramping. Catatan kecil: waktu di sitasi ingatan tetap waktu giliran terakhir, bukan waktu cek asli |
+| B1 | LOLOS (catatan) | 9m30s / 6.223 | Pertama kalinya kedua paruh hadir bersamaan: pembuka status ✅ + prosedur dari blok. Langkah estimasi 1x24 jam kerja hilang (goyangan kelengkapan generasi; chunk-nya ada di blok). Mode augment Validator tidak perlu dipakai |
+| C1 | LOLOS | 7m46s / 6.079 | Gerbang membuka untuk pertanyaan pengetahuan tanpa resi; 17:00 WIB dari FAQ-020 di blok |
+| E1 | LOLOS bersih | 4m24s / 3.720 | Kontaminasi hilang total: dua resi, tiga baris, sitasi "Sumber: sistem (pengecekan otomatis)" persis. Eksekusi tercepat dan teramping di era Guarded |
+
+Kesimpulan addendum:
+
+- Ketiga obat v2.1 terbukti pada targetnya masing-masing: gerbang niat
+  (A2/E1 — relevansi dan latensi), baris pembuka status (A1/B1 —
+  kelengkapan), numCtx (A4 — ingatan). Sesi A 4/4 untuk pertama kalinya;
+  total waktu rantai ±38 menit melawan ±70 menit di v2.
+- Lantai latensi sekarang adalah system prompt (±3.000 token, dibayar di
+  setiap giliran). Kandidat v2.2, diparkir sampai ada keputusan: diet
+  prompt khusus varian guarded; chunking bank FAQ satu-FAQ-satu-chunk
+  (Workflow A + ingest ulang); pengetatan retrieval (ambang skor relatif);
+  peta sinonim status di Validator.
+- Masih terbuka, tidak berubah: tool API/MCP asli (membuka uji ulang F1),
+  dokumen 08 jalur eskalasi terisi, cakupan `check_ongkir` /
+  `get_order_detail`, Putaran 3 dengan ±20 pertanyaan asli tim internal.
+
 ## Kategori yang wajib terwakili di test set asli
 
 - [x] SOP/FAQ lurus (jawaban ada persis di dokumen) — TC-5
