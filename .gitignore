@@ -6,6 +6,11 @@
 data/*
 !data/README.md
 
+# Folder data RAG lokal (nama alternatif) & dokumen mentah
+rag/
+data_rag/
+*.pdf
+
 # Volume & artefak lokal
 *.log
 .DS_Store

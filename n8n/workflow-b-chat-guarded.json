@@ -34,7 +34,9 @@
     {
       "parameters": {
         "model": "={{ $env.LLM_MODEL || 'qwen2.5:7b-instruct-q4_K_M' }}",
-        "options": {}
+        "options": {
+          "numCtx": 8192
+        }
       },
       "id": "c1f7a003-8b2e-4b6e-9311-66d4001a0003",
       "name": "Ollama Chat Model",
@@ -154,7 +156,7 @@
         "description": "MOCK: Cek posisi dan status paket berdasarkan nomor resi (tracking_number). Data dummy dari mock/mock-tools.json.",
         "specifyInputSchema": true,
         "jsonSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"tracking_number\": {\n      \"type\": \"string\",\n      \"description\": \"Nomor resi pengiriman (mis. DUMMY1234567890)\"\n    }\n  },\n  \"required\": [\"tracking_number\"]\n}",
-        "jsCode": "// MOCK get_shipment_status — respon dummy sesuai mock/mock-tools.json & docs/mcp-tool-contract.md\nreturn JSON.stringify({\n  tracking_number: \"DUMMY1234567890\",\n  courier: \"DUMMY-REG\",\n  current_status: \"IN_TRANSIT\",\n  last_location: \"Hub Jakarta Timur (DUMMY)\",\n  updated_at: \"2026-11-17T08:15:00+07:00\",\n  history: [\n    {\n      timestamp: \"2026-11-17T08:15:00+07:00\",\n      location: \"Hub Jakarta Timur (DUMMY)\",\n      status: \"IN_TRANSIT\"\n    },\n    {\n      timestamp: \"2026-11-16T19:40:00+07:00\",\n      location: \"Drop Point Bandung (DUMMY)\",\n      status: \"PICKED_UP\"\n    }\n  ]\n});"
+        "jsCode": "// MOCK get_shipment_status — respon dummy sesuai mock/mock-tools.json & docs/mcp-tool-contract.md\n// v2.1.1: tracking_number MENGIKUTI parameter yang diminta (sebelumnya\n// hardcoded DUMMY1234567890), menyamai perilaku replika di Router Resi —\n// supaya jawaban berbasis tool tidak membawa nomor resi yang salah.\nconst _resi = (typeof tracking_number !== 'undefined' && tracking_number)\n  ? String(tracking_number).toUpperCase()\n  : 'DUMMY1234567890';\nreturn JSON.stringify({\n  tracking_number: _resi,\n  courier: \"DUMMY-REG\",\n  current_status: \"IN_TRANSIT\",\n  last_location: \"Hub Jakarta Timur (DUMMY)\",\n  updated_at: \"2026-11-17T08:15:00+07:00\",\n  history: [\n    {\n      timestamp: \"2026-11-17T08:15:00+07:00\",\n      location: \"Hub Jakarta Timur (DUMMY)\",\n      status: \"IN_TRANSIT\"\n    },\n    {\n      timestamp: \"2026-11-16T19:40:00+07:00\",\n      location: \"Drop Point Bandung (DUMMY)\",\n      status: \"PICKED_UP\"\n    }\n  ]\n});"
       },
       "id": "c1f7a009-8b2e-4b6e-9311-66d4001a0009",
       "name": "get_shipment_status",
@@ -208,7 +210,9 @@
     {
       "parameters": {
         "model": "={{ $env.TOOL_LLM_MODEL || 'qwen2.5:3b-instruct' }}",
-        "options": {}
+        "options": {
+          "numCtx": 8192
+        }
       },
       "id": "70cfffce-9d5d-43ad-b00f-26302dba617f",
       "name": "Ollama Chat Model — Tool (3B)",
