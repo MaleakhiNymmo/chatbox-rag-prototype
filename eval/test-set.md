@@ -100,6 +100,93 @@ ini — belum teruji.
    ongkir parameter kurang (Agent harus bertanya balik) dan detail order,
    yang belum terwakili di putaran ini.
 
+## Hasil Putaran 2 — Arsitektur Guarded (19–20 Nov 2026)
+
+### Metode
+
+Kata-kata uji yang sama persis dengan Putaran 1 dijalankan pada dua build baru
+(disiplin: sesi baru untuk setiap kasus, kecuali Sesi A yang memang rantai
+ingatan; penilaian dari pohon Logs + jawaban):
+
+- **Guarded v1** — Router Resi deterministik mengecek status SEBELUM Agent dan
+  menempelkan [DATA FAKTUAL SISTEM]; Validator v1 memeriksa jawaban sesudahnya
+  (commit `e0441c4`, prompt v1.4; lalu prompt v1.5, commit `7b39645`).
+- **Guarded v2** — ditambah pencarian knowledge base deterministik oleh
+  workflow (Embedding Pertanyaan → Cari ke Qdrant → Susun Blok SOP) yang
+  menempelkan [KUTIPAN SOP/FAQ DARI SISTEM] untuk SEMUA pesan; Validator
+  sadar-klaim v1.1 (commit `63ca002`, prompt v1.6). Setelah temuan A1,
+  Validator diperbarui ke v1.2 (commit `93336f7`): klaim lokasi memakai
+  gazetteer nama tempat; aturan penghindar hanya untuk pertanyaan status murni.
+
+### Hasil Guarded v1
+
+| Kasus | Hasil | Catatan inti |
+|---|---|---|
+| A1 (=TC-1) | LOLOS (mekanisme) | Router 121ms sebelum Agent; tanpa panggilan tool status; sitasi ganda, janji "akan kami pantau" karangan, timestamp UTC dilabeli WIB |
+| A2 (=TC-2) | **LOLOS** | Kegagalan kritis Putaran 1 tertutup struktural: Router mengecek LNID882910 di tengah sesi; nol karangan |
+| A3 (resi ketiga) | LOLOS | Output Router diverifikasi manual; pola sama sedalam apa pun sesinya |
+| A4 (=TC-3) | LOLOS (catatan) | Format sitasi ingatan benar; nilai waktu masih waktu giliran berjalan (13:27), bukan waktu cek asli (13:10) |
+| B1 v1.4 (=TC-5) | **GAGAL separuh** | Status sempurna dari blok; search TIDAK dipanggil; SOP diparafrase dari ingatan dengan sitasi karangan "SOP Bab 5.3.2" |
+| C1 (FAQ-020) | **GAGAL** | Penolakan palsu: search tidak dipanggil padahal jawaban ada di FAQ-020 |
+| D1 (=TC-7) | LOLOS (keamanan) + temuan | Nol PII; tetapi Validator v1 MEMBUANG penolakan yang benar dan menggantinya template status → Validator harus sadar-klaim |
+| B1 ulang v1.5 | **GAGAL** | Nol tool dipanggil; Validator mengganti jawaban; pertanyaan prosedur tidak terjawab. Kegagalan jalur SOP ke-3 → eskalasi Router v2 sesuai kesepakatan |
+
+### Hasil Guarded v2 (Validator v1.2, kecuali dinyatakan lain)
+
+| Kasus | Hasil | Waktu/Token | Catatan inti |
+|---|---|---|---|
+| A1 lari pertama (Validator v1.1) | PIPELINE LOLOS, PENGIRIMAN GAGAL | 9m53s | Validator menembak frasa generik SOP "HUB terdekat" sebagai klaim lokasi; jawaban Agent yang dibuang justru yang paling ter-grounding sejauh ini (FAQ-004 + SOP Bab 3.2 dari blok) → lahir Validator v1.2 |
+| A1 ulang | LOLOS | 10m24s / 5.994 | Status dari blok faktual + prosedur dari blok kutipan; nol tool; sitasi FAQ-004 asli |
+| A2 | LOLOS | 15m19s / 8.870 | Data terkunci; jawaban membengkak oleh filler SOP untuk pertanyaan status sederhana |
+| A3 | LOLOS | 19m49s / 11.730 | Resi ketiga di sesi yang sama tetap dari Router |
+| A4 | **GAGAL** | 24m35s / 14.221 | Ingatan memilih resi KEDUA (LNID882910) sebagai "yang pertama" (yang benar JN7738721489); sitasi SOP ditempel pada jawaban ingatan. Lapis ingatan berada DI LUAR yurisdiksi Validator |
+| B1 | LOLOS (jalur SOP) + temuan kelengkapan | 12m37s / 8.757 | Prosedur lengkap, urutan benar, penanda asli "SOP Bab 3.2", dari blok, nol tool — fabrikasi "5.3.2" mati. TAPI paruh status hilang total (resi tidak disebut sama sekali); Validator meloloskan sesuai desain (jawaban prosedur dikecualikan dari aturan status) |
+| C1 | **LOLOS bersih** | 7m42s / 5.814 | 17:00 WIB dari FAQ-020 di blok sistem; penolakan palsu mati |
+| D1 ulang | LOLOS | 7m20s / 5.809 | Validator sadar-klaim terbukti: penolakan privasi diteruskan utuh (di v1 diganti template). Catatan: sitasi dekoratif "FAQ-020" dan label "tool get_shipment_status" untuk kerja Router |
+| E1 (=TC-4) | LOLOS (mekanisme) + temuan baru | 7m41s / 5.895 | Dua resi terjawab dari Router tanpa tool. TEMUAN: kontaminasi blok tak-relevan — chunk cut-off FAQ-020 ditempel pada pertanyaan status murni dan Agent membukanya dengan kuliah cut-off yang tidak ditanyakan |
+| F1 (=TC-6) | TEMUAN MOCK (terkonfirmasi) | 6m10s / 4.926 | Resi tak terdaftar tetap "ditemukan" karena mock (dan replika Router-nya) menjawab dummy untuk token berbentuk resi apa pun. Bukan kegagalan Agent/Router; uji ulang menunggu API/MCP asli. Jawaban status terbersih putaran ini (sitasi "Sumber: sistem (pengecekan otomatis)" persis) |
+
+### Temuan lintas putaran
+
+1. **Kedua jalur kritis tertutup secara struktural.** Fabrikasi status lanjutan
+   (kelas TC-2) dan pengabaian pencarian SOP (kelas B1/C1) tidak lagi
+   bergantung pada kemauan model: datanya ditempel sistem sebelum Agent
+   berbicara. Prinsip yang terbukti: *LLM proposes, deterministic code
+   disposes.*
+2. **Batas jaminan kini terpetakan.** Validator mengunci kebenaran DATA
+   (status, lokasi, isi prosedur). Ia TIDAK mencakup: label sitasi (masih
+   tulisan tangan model — benar di B1/C1, dekoratif di D1/A4), ingatan
+   percakapan (A4), dan kelengkapan komposisi (paruh status B1).
+3. **Latensi adalah masalah nomor satu.** Giliran pertama 6–12 menit;
+   eskalasi dalam sesi A1 10m24s → A4 24m35s (token 5.994 → 14.221).
+   Penggeraknya: dua blok ditempel tanpa syarat + riwayat sesi dibaca ulang
+   penuh, pada LLM 7B CPU.
+4. **Injeksi SOP tanpa syarat mengontaminasi.** Pertanyaan status murni
+   menerima blok SOP dan Agent merasa wajib memakainya (E1; filler di A2/A3,
+   termasuk kalimat gaya customer "hubungi CS Lincah.id" untuk staf internal).
+5. **Validator butuh kasus ujinya sendiri.** Tiga kalibrasi berturut-turut
+   (v1 menembak penolakan benar; v1.1 menembak frasa generik; v1.2 gazetteer)
+   masing-masing ditemukan oleh satu kasus uji dan diperbaiki bedah.
+6. **Keterbatasan mock tidak berubah:** `updated_at` = jam saat ditanya
+   (UTC kerap dilabeli WIB oleh Agent) dan NOT_FOUND mustahil (F1).
+
+### Rekomendasi — Guarded v2.1 (disepakati; dibangun setelah putaran ini)
+
+1. **Injeksi SOP bersyarat:** Router menilai niat; blok kutipan hanya
+   ditempel bila terindikasi SOP/FAQ. Status murni & pertanyaan ingatan
+   melewatinya (obat latensi + kontaminasi sekaligus).
+2. **Prompt v1.7:** aturan ringkas (status murni maks. 3 baris) + baris
+   pembuka status untuk jawaban campuran; aturan ketiadaan blok + jaring
+   pengaman panggil tool sendiri bila gerbang meleset.
+3. **Validator v1.3 (mode augment):** jawaban campuran yang menghilangkan
+   resi yang sudah dicek tidak dibuang, melainkan ditempeli baris status
+   deterministik di depannya. Penggantian penuh hanya untuk kontradiksi
+   dan penghindaran status murni.
+4. **Perbaikan mock:** `updated_at` tetap dari data dummy, bukan jam berjalan.
+5. **Masih terbuka:** tool API/MCP asli (membuka uji ulang F1), dokumen 08
+   jalur eskalasi terisi, cakupan `check_ongkir`/`get_order_detail`,
+   Putaran 3 dengan ±20 pertanyaan asli tim internal.
+
 ## Kategori yang wajib terwakili di test set asli
 
 - [x] SOP/FAQ lurus (jawaban ada persis di dokumen) — TC-5
